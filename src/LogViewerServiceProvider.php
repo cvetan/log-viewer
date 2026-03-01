@@ -6,6 +6,7 @@
 namespace Opcodes\LogViewer;
 
 use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Routing\Middleware\ValidateSignature;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -18,6 +19,9 @@ use Opcodes\LogViewer\Console\Commands\PublishCommand;
 use Opcodes\LogViewer\Events\LogFileDeleted;
 use Opcodes\LogViewer\Facades\LogViewer;
 use Opcodes\LogViewer\Http\Middleware\EnsureFrontendRequestsAreStateful;
+use Opcodes\LogViewer\Http\Middleware\ForwardRequestToHostMiddleware;
+use Opcodes\LogViewer\Http\Middleware\JsonResourceWithoutWrappingMiddleware;
+use Opcodes\LogViewer\Http\Middleware\SetActiveRouteConfigMiddleware;
 
 class LogViewerServiceProvider extends ServiceProvider
 {
@@ -103,6 +107,73 @@ class LogViewerServiceProvider extends ServiceProvider
         ], function () {
             $this->loadRoutesFrom(self::basePath('/routes/web.php'));
         });
+
+        foreach (config('log-viewer.routes', []) as $routeKey => $routeConfig) {
+            $this->registerAdditionalRoute($routeKey, $routeConfig);
+        }
+    }
+
+    /**
+     * Register an additional Log Viewer route with its own path and file set.
+     */
+    protected function registerAdditionalRoute(string $routeKey, array $routeConfig): void
+    {
+        $routePath = $routeConfig['path'] ?? $routeKey;
+        $routeDomain = $routeConfig['domain'] ?? config('log-viewer.route_domain');
+        $routeApiMiddleware = (array) ($routeConfig['api_middleware'] ?? config('log-viewer.api_middleware', []));
+        $routeWebMiddleware = (array) ($routeConfig['middleware'] ?? config('log-viewer.middleware', []));
+        $configMiddleware = SetActiveRouteConfigMiddleware::class.':'.$routeKey;
+        $namePrefix = "log-viewer.{$routeKey}";
+
+        Route::group([
+            'domain' => $routeDomain,
+            'prefix' => Str::finish($routePath, '/').'api',
+            'namespace' => 'Opcodes\LogViewer\Http\Controllers',
+            'middleware' => array_merge($routeApiMiddleware, [$configMiddleware]),
+        ], function () use ($namePrefix) {
+            Route::get('hosts', 'HostsController@index')->name("{$namePrefix}.hosts");
+
+            Route::middleware([
+                ForwardRequestToHostMiddleware::class,
+                JsonResourceWithoutWrappingMiddleware::class,
+            ])->group(function () use ($namePrefix) {
+                Route::get('folders', 'FoldersController@index')->name("{$namePrefix}.folders");
+                Route::get('folders/{folderIdentifier}/download/request', 'FoldersController@requestDownload')->name("{$namePrefix}.folders.request-download");
+                Route::post('folders/{folderIdentifier}/clear-cache', 'FoldersController@clearCache')->name("{$namePrefix}.folders.clear-cache");
+                Route::delete('folders/{folderIdentifier}', 'FoldersController@delete')->name("{$namePrefix}.folders.delete");
+
+                Route::get('files', 'FilesController@index')->name("{$namePrefix}.files");
+                Route::get('files/{fileIdentifier}/download/request', 'FilesController@requestDownload')->name("{$namePrefix}.files.request-download");
+                Route::post('files/{fileIdentifier}/clear-cache', 'FilesController@clearCache')->name("{$namePrefix}.files.clear-cache");
+                Route::delete('files/{fileIdentifier}', 'FilesController@delete')->name("{$namePrefix}.files.delete");
+
+                Route::post('clear-cache-all', 'FilesController@clearCacheAll')->name("{$namePrefix}.files.clear-cache-all");
+                Route::post('delete-multiple-files', 'FilesController@deleteMultipleFiles')->name("{$namePrefix}.files.delete-multiple-files");
+
+                Route::get('logs', 'LogsController@index')->name("{$namePrefix}.logs");
+            });
+
+            Route::get('folders/{folderIdentifier}/download', 'FoldersController@download')
+                ->middleware(ValidateSignature::class)
+                ->name("{$namePrefix}.folders.download");
+
+            Route::get('files/{fileIdentifier}/download', 'FilesController@download')
+                ->middleware(ValidateSignature::class)
+                ->name("{$namePrefix}.files.download");
+        });
+
+        if (! config('log-viewer.api_only')) {
+            Route::group([
+                'domain' => $routeDomain,
+                'prefix' => $routePath,
+                'namespace' => 'Opcodes\LogViewer\Http\Controllers',
+                'middleware' => array_merge($routeWebMiddleware, [$configMiddleware]),
+            ], function () use ($namePrefix) {
+                Route::get('/{view?}', 'IndexController')
+                    ->where('view', '(.*)')
+                    ->name("{$namePrefix}.index");
+            });
+        }
     }
 
     protected function registerResources()

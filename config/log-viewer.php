@@ -43,6 +43,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Additional Log Viewer Routes
+    |--------------------------------------------------------------------------
+    | You can define additional Log Viewer routes here, each with their own
+    | path, middleware, and included/excluded log file patterns. This allows
+    | you to expose separate Log Viewer instances (e.g. for different teams
+    | or environments) each showing only a specific subset of log files.
+    |
+    | Example:
+    | 'routes' => [
+    |     'security' => [
+    |         'path' => 'security-logs',
+    |         'domain' => null,
+    |         'middleware' => ['web', \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class],
+    |         'api_middleware' => [
+    |             \Opcodes\LogViewer\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+    |             \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
+    |         ],
+    |         'include_files' => ['security*.log'],
+    |         'exclude_files' => [],
+    |     ],
+    | ],
+    |
+    */
+
+    'routes' => [
+        // Define additional routes here
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Log Viewer Assets Path (Deprecated)
     |--------------------------------------------------------------------------
     | The path to the published Log Viewer assets.
