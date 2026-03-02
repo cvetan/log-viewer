@@ -152,3 +152,12 @@ function createLogIndex($file = null, $query = null, array $predefinedLogs = [])
 
     return $logIndex;
 }
+
+function reloadRoutes(): void
+{
+    // unset any routes that were set previously
+    app('router')->setRoutes(new \Illuminate\Routing\RouteCollection);
+
+    // boot the service provider to register the routes again
+    (new \Opcodes\LogViewer\LogViewerServiceProvider(app()))->boot();
+}

@@ -47,9 +47,11 @@ class FoldersController
 
         Gate::authorize('downloadLogFolder', $folder);
 
+        $routePrefix = $request->attributes->get('log-viewer-route-prefix', 'log-viewer');
+
         return response()->json([
             'url' => URL::temporarySignedRoute(
-                'log-viewer.folders.download',
+                "{$routePrefix}.folders.download",
                 now()->addMinutes(30),   // longer time to allow for processing of the ZIP file
                 ['folderIdentifier' => $folderIdentifier]
             ),

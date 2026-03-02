@@ -141,25 +141,29 @@ In your Laravel application, modify the `composer.json` adding a `repositories` 
 
 This will instruct composer to install Log Viewer from your local folder instead of using the version on the official repository.
 
-Example:
+In your Laravel application's `composer.json`:
 
 ```json
-// File: composer.json
-
 {
-  "scripts": { ... },
-
   "repositories": [
     {
       "type": "path",
-      "url": "/home/myuser/projects/log-viewer"
-
+      "url": "/home/myuser/projects/log-viewer",
+      "options": {
+        "symlink": true
+      }
     }
   ]
 }
 ```
 
-Proceed with `composer require opcodesio/log-viewer`.
+Then require the package using the `@dev` stability flag:
+
+```shell
+composer require opcodesio/log-viewer:@dev
+```
+
+The `"symlink": true` option ensures that Composer creates a symbolic link to your local clone, so any changes you make to the package are immediately reflected in your Laravel application without needing to run `composer update` again.
 
 ### 📌 Step 7
 

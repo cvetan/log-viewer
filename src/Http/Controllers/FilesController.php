@@ -40,9 +40,11 @@ class FilesController
 
         Gate::authorize('downloadLogFile', $file);
 
+        $routePrefix = $request->attributes->get('log-viewer-route-prefix', 'log-viewer');
+
         return response()->json([
             'url' => URL::temporarySignedRoute(
-                'log-viewer.files.download',
+                "{$routePrefix}.files.download",
                 now()->addMinute(),
                 ['fileIdentifier' => $fileIdentifier]
             ),

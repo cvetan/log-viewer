@@ -84,6 +84,52 @@ By default, the application is available at: `{APP_URL}/log-viewer`.
 
 Please visit the **[Log Viewer Docs](https://log-viewer.opcodes.io/docs)** to learn about configuring Log Viewer to your needs.
 
+## Multiple Log Viewer Routes
+
+You can expose multiple separate Log Viewer instances at different URLs, each showing only a configured subset of log files. This is useful for giving different teams or roles access to only the logs relevant to them.
+
+Publish the config file if you haven't already:
+
+```bash
+php artisan vendor:publish --tag=log-viewer-config
+```
+
+Then add a `routes` array to your `config/log-viewer.php`:
+
+```php
+'routes' => [
+    'security' => [
+        // URL path for this Log Viewer instance: {APP_URL}/security-logs
+        'path' => 'security-logs',
+
+        // Optional: restrict to a specific domain
+        'domain' => null,
+
+        // Optional: override web middleware for this route
+        'middleware' => [
+            'web',
+            \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
+        ],
+
+        // Optional: override API middleware for this route
+        'api_middleware' => [
+            \Opcodes\LogViewer\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
+            \Opcodes\LogViewer\Http\Middleware\AuthorizeLogViewer::class,
+        ],
+
+        // Show only these log files on this route (same syntax as the top-level include_files)
+        'include_files' => ['security*.log'],
+
+        // Exclude these log files from this route
+        'exclude_files' => [],
+    ],
+],
+```
+
+Each entry in `routes` results in a fully functional Log Viewer at the specified `path`. The main Log Viewer at `route_path` is not affected.
+
+Route names are namespaced as `log-viewer.{key}.*` (e.g. `log-viewer.security.index`), so they do not conflict with the default routes.
+
 ## Troubleshooting
 
 Here are some common problems and solutions.

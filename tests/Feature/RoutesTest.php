@@ -43,18 +43,3 @@ test('only both api and web', function () {
     expect(route('log-viewer.index'))->toBe('http://localhost/log-viewer');
     get(route('log-viewer.index'))->assertStatus(200);
 });
-
-/*
-|--------------------------------------------------------------------------
-| HELPERS
-|--------------------------------------------------------------------------
-*/
-
-function reloadRoutes(): void
-{
-    // unset any routes that were set previously
-    app('router')->setRoutes(new \Illuminate\Routing\RouteCollection);
-
-    // boot the service provider to register the routes again
-    (new \Opcodes\LogViewer\LogViewerServiceProvider(app()))->boot();
-}
